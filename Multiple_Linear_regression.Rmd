@@ -1,0 +1,184 @@
+---
+title: "Multiple Linear Regression"
+author: "Diwash Shrestha"
+date: "2018/08/12"
+output: 
+  html_notebook:
+    theme: yeti
+---
+<center><img src = "https://madhureshkumar.files.wordpress.com/2015/07/cartoon_guide_regression.png"></center>
+
+Nowadays,I am learning about algorithm from ISLR with application in R. previously I was using Simple Linear Regression to predict the sales using single predictors. In this blog, we will use multiple predictors to predict the response. We will use Auto dataset from the MASS package and predict mp(Mile per Gallon) using multiple predictors in Dataset.
+```{r fig.height=14, fig.width=14, message=FALSE, warning=FALSE}
+library(ISLR)
+library(MASS)
+library(corrplot) 
+library(dplyr)
+```
+
+```{r message=FALSE, warning=FALSE}
+data("Auto")
+attach(Auto)
+
+head(Auto)
+```
+```{r message=FALSE, warning=FALSE}
+str(Auto)
+```
+
+```{r message=FALSE, warning=FALSE}
+summary(Auto)
+```
+The Auto dataset has 392 observation with 9 columns. The columns are like mpg, cylinders, displacement, horsepower etc which are related to the cars. Each row is the data about the cars and name column can be used to identify. In multiple regression, we will use more than one predictors. Before applying the lm() to the dataset we need to drop name column which is a qualitative variable.
+```{r message=FALSE, warning=FALSE}
+
+auto_df <- select(Auto,-name)
+```
+Lets look the dataset after excluding the Name column.
+
+```{r message=FALSE, warning=FALSE}
+summary(auto_df)
+```
+The auto_df dataframe contains 8 columns lets look the plot of the dataset.
+
+```{r fig.height=10, fig.width=10, message=FALSE, warning=FALSE}
+# Plot matrix of all variables.
+plot(auto_df, col="navy", main="Matrix Scatterplot")
+
+```
+The above matrix plot helps to see the relationship between two columns and pattern in the datasets. For example, horsepower and weight seem to have positive relationships.
+From the plot, mpg seems to have the same pattern with displacement, weight, and horsepower.
+
+In this blog, we want to find the best model for predicting the mpg using different predictors in data. We will look upon residuals error, p-value for the performance of the model.
+
+Multiple Linear regression uses multiple predictors. The equation for multiple linear regression looks like:
+$$Y=a+b*X1 + c*X2 $$
+where:
+
+*$Y$ is Response or dependent variable
+*$a$ is intercept
+*$X1$ and $X2$ are predictors or independent variable
+*$b$ and $c$ are coefficeints for the b and c respectively
+
+Before fitting the data to a model lets create a test and train set of the Data. Train set will be used to train or fit the model and test set will be used to check the performance of the model. We will split the data to train, test set using an 80:20 ratio.
+```{r message=FALSE, warning=FALSE}
+require(caTools)
+sample = sample.split(auto_df,SplitRatio = 0.80) 
+train1 =subset(auto_df,sample ==TRUE) # creates a training dataset named train1 with rows which are marked as TRUE
+test1=subset(auto_df, sample==FALSE)
+```
+Lets look into the train and test data.
+```{r message=FALSE, warning=FALSE}
+summary(train1)
+
+```
+```{r message=FALSE, warning=FALSE}
+summary(test1)
+```
+
+
+
+## Fitting Models
+
+Its time to fit the model and We will use Least Square method to fit our regression model.
+```{r message=FALSE, warning=FALSE}
+#fitting linear model and run summary of the fit
+fit1<- lm(mpg~., data = train1)
+summary(fit1)
+```
+We have the results of the model .
+From the model output we found that:
+
+* The p value of  cylinders and acceleration shows that there is no significant relation with mpg.
+* The RSE is 3.441 where p-value is very small.
+
+The matrix scatterplot above shows that there is the high correlation between displacement,weight, and horsepower. When there are two or more variables strongly correlated it is called collinearity. Let us validate by using correlation plot.
+```{r fig.height=10, fig.width=10, message=FALSE, warning=FALSE, paged.print=TRUE}
+# Plot a correlation graph
+cor = cor(test1[1:8])
+corrplot(cor, method = "number")
+```
+From the correlation, we can see that there is a strong relation between cylinders, displacement,horsepower, and weight. The mpg is also strongly correlated to cylinders, and weight. This situation is called collinearity.The problem of collinearity in the response is that it is difficult to find the individual effect on response. We should drop use only one of the collinear variables.
+
+As the cylinders don't show any significant relation in the first model with mpg we will exclude cylinders. Out of displacement, horsepower, and weight, the output of the first model shows that weight and mpg have a highly significant relation. We will use weight out of the other collinear variables in the next model.
+```{r message=FALSE, warning=FALSE}
+fit2 <- lm(mpg~weight+year+origin,data = train1)
+summary(fit2)
+```
+In this model, we find all predictors p-value is highly significant. After excluding the collinear variable the F- statistic improved from 184.8 to 425.2 which is a great improvement. But there is no improvement on RSE and adjusted R squared value.
+Let's plot the residuals:
+
+```{r message=FALSE, warning=FALSE}
+## plotting residuals plot
+plot(fit2, which =1)
+```
+This plot shows some of the outliers lying far away from the middle of the graph.
+
+We will try a different type of transformation on both predictors and the response value and see how the performance of model changes. In the next model, we will use the natural log to the mpg using log() and see the change in performance of the model.
+```{r message=FALSE, warning=FALSE}
+fit3 <- lm(log(mpg)~weight+year+origin,data = train1)
+summary(fit3)
+plot(fit3, which =1)
+```
+After some changes in the model, the performance of the model is increased. The  Adjusted R-squared raised to 0.8721 and F-statistic is increased to 668.8. The p-value of the predictors is significant.
+
+Let's make a certain change in this model. We will use the natural log to the weight and mpg.
+```{r message=FALSE, warning=FALSE}
+fit4 <- lm(log(mpg)~log(weight)+year+origin,data = auto_df)
+summary(fit4)
+plot(fit4,which = 1)
+```
+In this model, the F-statistics and Adjusted R-squared are improved. Most of the predictor's p-value is significant.The origin predictor seems to have weak p-value which means that origin doesn't have strong relationships with the mpg while the presence of other predictors. So, we will exclude the origin and make a new model.
+```{r message=FALSE, warning=FALSE}
+fit5 <- lm(log(mpg)~log(weight)+year,data = auto_df)
+summary(fit5)
+plot(fit5,which = 1)
+
+```
+The output of this model shows that the F-statistics is increased to 1436 and the Adjusted R-squared is also increased.The predictor has highly significant p values. This model is better than previous models.
+
+The final regression equation for our model is:
+
+$$ log(mpg) = 8.0395 + log(weight)* -.9341 + year * .0328 $$  
+
+## Accuracy
+
+We will use the test data to check the accuracy of our final model.
+```{r message=FALSE, warning=FALSE}
+predictions<-predict(fit5, test1)
+mse <- mean((test1$mpg - predictions)^2)
+print(mse)
+sigma(fit5)/mean(test1$mpg)
+```
+
+```{r message=FALSE, warning=FALSE}
+test1$predicted<- predict(fit5,test1)
+actuals_preds <- data.frame(test1$mpg,test1$predicted)
+names(actuals_preds)<- c("mpg","predicted")
+correlation_accuracy <- cor(actuals_preds)
+correlation_accuracy
+```
+The correlation of the models shows that the accuracy is around 92 %.Lets check the true mpg and predicted mpg for the test data.
+
+```{r}
+head(actuals_preds)
+
+```
+Wow! what happened?We used log to the response value in our model which predicted the response with a log. If we use  log to the original mpg we can relate this result.
+
+```{r message=FALSE, warning=FALSE}
+actuals_preds$log_mpg <- log(actuals_preds$mpg)
+head(actuals_preds)
+```
+
+## Finally
+<center> <img src="https://i.imgflip.com/sy501.jpg"></center>
+
+In this blog, we used Multiple Linear Regression methods to find the mpg of the car. We had 8 columns out of which 4 were collinear to each other. we got the best model with only two predictors. 
+$$ log(mpg) = 8.0395 + log(weight)* -.9341 + year * .0328 $$
+
+## Reference:
+
+*  [ISLR Chapter3](http://www-bcf.usc.edu/~gareth/ISL/)
+*  [Rpub](https://rpubs.com/FelipeRego/MultipleLinearRegressionInRFirstSteps)
+*  [MachineLearningPlus](https://www.machinelearningplus.com/machine-learning/complete-introduction-linear-regression-r/)
